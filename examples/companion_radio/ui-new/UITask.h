@@ -60,6 +60,9 @@ class UITask : public AbstractUITask {
   char _alert[80];
   unsigned long _alert_expiry;
   int _msgcount;
+  char _ch0_name[32];
+  char _ch0_msg[160];
+  uint32_t _ch0_timestamp;
   unsigned long ui_started_at, next_batt_chck;
   unsigned long next_backlight_btn_check = 0;
   unsigned long backlight_btn_pressed_at = 0;
@@ -94,12 +97,17 @@ public:
     next_batt_chck = _next_refresh = 0;
     ui_started_at = 0;
     curr = NULL;
+    _ch0_name[0] = _ch0_msg[0] = 0;
+    _ch0_timestamp = 0;
   }
   void begin(DisplayDriver* display, SensorManager* sensors, NodePrefs* node_prefs);
 
   void gotoHomeScreen() { setCurrScreen(home); }
   void showAlert(const char* text, int duration_millis);
   int  getMsgCount() const { return _msgcount; }
+  const char* getChannel0Name() const { return _ch0_name; }
+  const char* getChannel0Msg() const { return _ch0_msg; }
+  uint32_t getChannel0Timestamp() const { return _ch0_timestamp; }
   bool hasDisplay() const { return _display != NULL; }
   bool isButtonPressed() const;
 

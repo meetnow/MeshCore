@@ -89,6 +89,7 @@ public:
 class HomeScreen : public UIScreen {
   enum HomePage {
     FIRST,
+    CHANNEL0,
     RECENT,
     RADIO,
 #ifdef BLE_PIN_CODE
@@ -328,6 +329,31 @@ public:
         display.setTextSize(2);
         display.drawTextCentered(display.width() / 2, 43, tmp);
         #endif
+      }
+    } else if (_page == HomePage::CHANNEL0) {
+      display.setTextSize(1);
+      display.setColor(UIColor::secondary_txt);
+      char filtered_name[32];
+      display.translateUTF8ToBlocks(filtered_name, _task->getChannel0Name(), sizeof(filtered_name));
+      display.drawTextEllipsized(0, 20, display.width(), filtered_name);
+      display.setColor(UIColor::primary_txt);
+      const char* msg = _task->getChannel0Msg();
+      if (msg[0] == 0) {
+        display.drawTextCentered(display.width() / 2, 36, "No messages");
+      } else {
+        int secs = _rtc->getCurrentTime() - _task->getChannel0Timestamp();
+        if (secs < 60) {
+          sprintf(tmp, "%ds", secs);
+        } else if (secs < 60*60) {
+          sprintf(tmp, "%dm", secs / 60);
+        } else {
+          sprintf(tmp, "%dh", secs / (60*60));
+        }
+        display.drawTextRightAlign(display.width() - 1, 20, tmp);
+        display.setCursor(0, 31);
+        char filtered_msg[160];
+        display.translateUTF8ToBlocks(filtered_msg, msg, sizeof(filtered_msg));
+        display.printWordWrap(filtered_msg, display.width());
       }
     } else if (_page == HomePage::RECENT) {
       the_mesh.getRecentlyHeard(recent, UI_RECENT_LIST_SIZE);
@@ -823,6 +849,13 @@ void UITask::onMessageRecv(mesh::Packet *pkt, const ContactInfo &from, uint8_t t
 void UITask::onChannelMessageRecv(mesh::Packet *pkt, ChannelDetails& channel_details, const char* text) {
   uint8_t path_len = pkt->isRouteFlood() ? pkt->path_len : 0xFF;
   ((MsgPreviewScreen *) msg_preview)->addPreview(path_len, channel_details.name, text);
+
+  ChannelDetails ch0;
+  if (the_mesh.getChannel(0, ch0) && memcmp(ch0.channel.secret, channel_details.channel.secret, sizeof(ch0.channel.secret)) == 0) {
+    StrHelper::strncpy(_ch0_name, channel_details.name, sizeof(_ch0_name));
+    StrHelper::strncpy(_ch0_msg, text, sizeof(_ch0_msg));
+    _ch0_timestamp = rtc_clock.getCurrentTime();
+  }
   setCurrScreen(msg_preview);
 
   if (_display != NULL) {
